@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sync/atomic"
@@ -20,7 +21,7 @@ func main() {
 	//mux.Handle("/assets/", http.FileServer(http.Dir(".")))
 	mux.Handle("/app/", apicfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot)))))
 	mux.HandleFunc("/healthz", handlerReadiness)
-	mux.HandleFunc("/matrics", apicfg.middlewareMetricsInc())
+	mux.HandleFunc("/matrics", apicfg.)
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,
@@ -28,6 +29,11 @@ func main() {
 	server.ListenAndServe()
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(server.ListenAndServe())
+}
+func (cfg *apiConfig) handlermatrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Hits : %d",cfg.fileserverHits.Load())))
 }
 func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
