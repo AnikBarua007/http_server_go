@@ -1,21 +1,48 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/AnikBarua007/http_server_go/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	dbQueries      *database.Queries
 }
 
 func main() {
 	const filepathRoot = "."
 	const port = "8080"
+
+	if err := godotenv.Load(); err != nil {
+		log.Printf("warning: could not load .env file: %v", err)
+	}
+
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL must be set")
+	}
+
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("error opening database connection: %v", err)
+	}
+	defer db.Close()
+
+	dbQueries := database.New(db)
+
 	apicfg := apiConfig{
 		fileserverHits: atomic.Int32{},
+		dbQueries:      dbQueries,
 	}
+
 	mux := http.NewServeMux()
 	//mux.Handle("/assets/", http.FileServer(http.Dir(".")))
 	fshandler := apicfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
@@ -29,7 +56,6 @@ func main() {
 		Addr:    ":" + port,
 		Handler: mux,
 	}
-	server.ListenAndServe()
 	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
 	log.Fatal(server.ListenAndServe())
 }
