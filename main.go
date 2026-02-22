@@ -15,6 +15,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries      *database.Queries
+	jwtSecret      string
 }
 
 func main() {
@@ -33,10 +34,14 @@ func main() {
 	}
 	defer db.Close()
 	dbQueries := database.New(db)
-
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET must be set")
+	}
 	apicfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		dbQueries:      dbQueries,
+		jwtSecret:      jwtSecret,
 	}
 	mux := http.NewServeMux()
 	//mux.Handle("/assets/", http.FileServer(http.Dir(".")))
@@ -51,6 +56,7 @@ func main() {
 	mux.HandleFunc("GET /api/chirps", apicfg.handlerGetAllChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", apicfg.handlerGetIDchirps)
 	mux.HandleFunc("POST /api/login", apicfg.handlerlogins)
+	mux.HandleFunc("POST /api/refresh", apicfg.handlerRefresh)
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,

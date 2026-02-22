@@ -137,8 +137,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 }
 func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 	type params struct {
-		Body   string `json:"body"`
-		UserID string `json:"user_id"`
+		Body string `json:"body"`
 	}
 	parameters := params{}
 	decoder := json.NewDecoder(r.Body)
@@ -166,9 +165,15 @@ func (cfg *apiConfig) handlerChirp(w http.ResponseWriter, r *http.Request) {
 	}
 	cleanBody := strings.Join(words, " ")
 
-	userID, err := uuid.Parse(parameters.UserID)
+	bearerToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, 400, "invalid user_id")
+		respondWithError(w, http.StatusUnauthorized, "invalid token")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(bearerToken, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "invalid token")
 		return
 	}
 
