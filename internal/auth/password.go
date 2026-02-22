@@ -55,7 +55,6 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 	}
 	return userID, nil
 }
-
 func GetBearerToken(headers http.Header) (string, error) {
 	authorizationHeader := strings.TrimSpace(headers.Get("Authorization"))
 	if authorizationHeader == "" {
